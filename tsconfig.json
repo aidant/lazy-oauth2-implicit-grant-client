@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "declaration": true,
+    "lib": ["ES2020", "DOM"],
+    "module": "ES2020",
+    "outDir": "lib",
+    "sourceMap": true,
+    "strict": true,
+    "target": "ES2020"
+  }
+}
