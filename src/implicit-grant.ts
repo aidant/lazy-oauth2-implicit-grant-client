@@ -9,18 +9,20 @@ export interface Parameters {
 }
 
 export interface AccessTokenResponse {
-  accessToken: string
-  tokenType: string
-  expiresIn: string | null
-  scope: string | null
+  access_token: string
+  token_type: string
+  expires_in?: string
+  scope?: string
   state: string
+  [response: string]: string | undefined
 }
 
 export interface ErrorResponse {
-  errorCode: string
-  errorDescription: string | null
-  errorUri: string | null
+  error: string
+  error_description?: string
+  error_uri?: string
   state: string
+  [response: string]: string | undefined
 }
 
 export type Response = AccessTokenResponse | ErrorResponse | null
@@ -37,19 +39,7 @@ export class ImplicitGrantError extends Error {
   declare response: Response
 
   constructor(code: ErrorCodes, response: Response = null) {
-    super(
-      {
-        [ErrorCodes.WindowCreateFailed]:
-          'Unable to open a new window, please ensure pop-ups are enabled.',
-        [ErrorCodes.NoResponse]:
-          'Unable to authenticate, no response from authentication endpoint.',
-        [ErrorCodes.ErrorResponse]:
-          'Unable to authenticate, an error was returned from the authentication endpoint.',
-        [ErrorCodes.StateMismatch]:
-          'Unable to authenticate, response invalid due to a state mismatch.',
-      }[code]
-    )
-
+    super(code)
     this.code = code
     this.response = response
   }
@@ -84,12 +74,12 @@ export const getAccessToken = async (
 
       if (!response) {
         reject(new ImplicitGrantError(ErrorCodes.NoResponse))
-      } else if ('errorCode' in response) {
+      } else if (response.error) {
         reject(new ImplicitGrantError(ErrorCodes.ErrorResponse, response))
       } else if (response.state !== parameters.state) {
-        reject(new ImplicitGrantError(ErrorCodes.StateMismatch))
+        reject(new ImplicitGrantError(ErrorCodes.StateMismatch, response))
       } else {
-        resolve(`${response.tokenType} ${response.accessToken}`)
+        resolve(`${response.token_type} ${response.access_token}`)
       }
     }
 
@@ -101,22 +91,13 @@ export const handleImplicitGrantCallback = () => {
   const query = new URLSearchParams(location.search)
   const hash = new URLSearchParams(location.hash.substring(1))
 
+  let response: Response = null
+
   if (query.has('error')) {
-    channel.postMessage({
-      errorCode: query.get('error')!,
-      errorDescription: query.get('error_description'),
-      errorUri: query.get('error_uri'),
-      state: query.get('state')!,
-    } as ErrorResponse)
+    response = Object.fromEntries(query.entries()) as ErrorResponse
   } else if (hash.has('access_token')) {
-    channel.postMessage({
-      accessToken: hash.get('access_token')!,
-      tokenType: hash.get('token_type')!,
-      expiresIn: hash.get('expires_in'),
-      scope: hash.get('scope'),
-      state: hash.get('state')!,
-    } as AccessTokenResponse)
-  } else {
-    channel.postMessage(null)
+    response = Object.fromEntries(hash.entries()) as AccessTokenResponse
   }
+
+  channel.postMessage(response)
 }
