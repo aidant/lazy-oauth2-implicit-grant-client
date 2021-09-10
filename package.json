@@ -1,6 +1,6 @@
 {
   "name": "@lazy/oauth2-implicit-grant-client",
-  "version": "1.0.0-rc.0",
+  "version": "1.0.0-rc.1",
   "description": "A simple Oauth2 Implicit Grant client for the lazy developer.",
   "license": "MIT",
   "private": false,
@@ -13,13 +13,14 @@
   },
   "homepage": "https://github.com/aidant/implicit-grant#readme",
   "keywords": [
-    "implicit",
     "grant",
+    "implicit",
     "oauth",
     "oauth2"
   ],
-  "main": "lib/implicit-grant.js",
+  "main": "./lib/implicit-grant.js",
+  "exports": "./lib/implicit-grant.js",
   "sideEffects": false,
   "type": "module",
-  "types": "lib/implicit-grant.d.ts"
+  "types": "./lib/implicit-grant.d.ts"
 }

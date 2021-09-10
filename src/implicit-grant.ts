@@ -1,5 +1,13 @@
 const channel = new BroadcastChannel('@lazy/oauth2-implicit-grant-client')
 
+export interface Parameters {
+  client_id: string
+  redirect_uri?: string
+  scope?: string
+  state?: string
+  [parameter: string]: string | undefined
+}
+
 export interface AccessTokenResponse {
   accessToken: string
   tokenType: string
@@ -48,21 +56,21 @@ export class ImplicitGrantError extends Error {
 }
 
 export const getAccessToken = async (
-  authorizationEndpoint: string,
-  clientId: string,
-  redirectUri?: string,
-  scope?: string
+  endpoint: string,
+  { ...parameters }: Parameters
 ): Promise<string> => {
-  const state = crypto
+  const url = new URL(endpoint)
+
+  parameters.response_type ??= 'token'
+  parameters.state ??= crypto
     .getRandomValues(new Uint8Array(48))
     .reduce((string, number) => string + number.toString(16).padStart(2, '0'), '')
 
-  const url = new URL(authorizationEndpoint)
-  url.searchParams.set('response_type', 'token')
-  url.searchParams.set('client_id', clientId)
-  if (redirectUri) url.searchParams.set('redirect_uri', redirectUri)
-  if (scope) url.searchParams.set('scope', scope)
-  url.searchParams.set('state', state)
+  for (const parameter in parameters) {
+    if (parameters[parameter]) {
+      url.searchParams.set(parameter, parameters[parameter]!)
+    }
+  }
 
   const child = open(url, '_blank')
   if (!child) throw new ImplicitGrantError(ErrorCodes.WindowCreateFailed)
@@ -78,7 +86,7 @@ export const getAccessToken = async (
         reject(new ImplicitGrantError(ErrorCodes.NoResponse))
       } else if ('errorCode' in response) {
         reject(new ImplicitGrantError(ErrorCodes.ErrorResponse, response))
-      } else if (response.state !== state) {
+      } else if (response.state !== parameters.state) {
         reject(new ImplicitGrantError(ErrorCodes.StateMismatch))
       } else {
         resolve(`${response.tokenType} ${response.accessToken}`)
@@ -89,7 +97,7 @@ export const getAccessToken = async (
   })
 }
 
-export const callbackImplicitGrant = () => {
+export const handleImplicitGrantCallback = () => {
   const query = new URLSearchParams(location.search)
   const hash = new URLSearchParams(location.hash.substring(1))
 

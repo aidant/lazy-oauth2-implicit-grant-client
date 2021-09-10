@@ -21,62 +21,54 @@
 - [Example](#example)
 - [API](#api)
   - [`getAccessToken`]
-  - [`callbackImplicitGrant`]
+  - [`handleImplicitGrantCallback`]
 
 ## Example
 
 ```ts
-import { getAccessToken, callbackImplicitGrant } from '@lazy/oauth2-implicit-grant-client'
+import { getAccessToken, handleImplicitGrantCallback } from '@lazy/oauth2-implicit-grant-client'
 
-callbackImplicitGrant()
+handleImplicitGrantCallback()
 
-const token = await getAccessToken(
-  'https://api.example.com/authorize',
-  'example-client-id',
-  'https://example.com/callback',
-  'example scope'
-)
+const token = await getAccessToken('https://api.example.com/authorize', {
+  client_id: 'example-client-id',
+})
 ```
 
 ## API
 
 ### `getAccessToken`
 
-The [`getAccessToken`] function handles the Implicit Grant authentication flow. A new window is created where the user is then prompted to authenticate with the Oauth2 provider, once the user had accepted or rejected the request the `callbackImplicitGrant` function then catches the response and returns it back via the promise from `getAccessToken` - just like magic.
+The [`getAccessToken`] function handles the Implicit Grant authentication flow. A new window is created where the user is then prompted to authenticate with the Oauth2 provider, once the user had accepted or rejected the request the `handleImplicitGrantCallback` function then handles the response and returns it back via the promise from `getAccessToken` - just like magic.
 
 #### Parameters
 
-- `authorizationEndpoint` - **string** - The Authorization endpoint of the Oauth2 provider.
-- `clientId` - **string** - The client id provided by the Oauth2 provider.
-- `redirectUri` - **[string]** - The callback url of your choosing, ensure you have configured this with your Oauth2 provider.
-- `scope` - **[string]** - The scopes if your choosing, see your Oauth2 provider for a list of scopes.
+- `endpoint` - **string** - The Authorization endpoint of the Oauth2 provider.
+- `parameters` - **object** - The Oauth2 parameters such as; `client_id`, `scope`, or `redirect_uri`.
 
 #### Example
 
 ```ts
 import { getAccessToken } from '@lazy/oauth2-implicit-grant-client'
 
-const token = await getAccessToken(
-  'https://api.example.com/authorize',
-  'example-client-id',
-  'https://example.com/callback',
-  'example scope'
-)
+const token = await getAccessToken('https://api.example.com/authorize', {
+  client_id: 'example-client-id',
+})
 ```
 
 Returns `Promise<string>`
 
-### `callbackImplicitGrant`
+### `handleImplicitGrantCallback`
 
-The [`callbackImplicitGrant`] function is responsible for returning the response from the authentication endpoint back to the [`getAccessToken`] function. If you call the [`getAccessToken`] and [`callbackImplicitGrant`] functions in the same page make sure you call the [`callbackImplicitGrant`] function before the [`getAccessToken`].
+The [`handleImplicitGrantCallback`] function is responsible for returning the response from the authentication endpoint back to the [`getAccessToken`] function. If you call the [`getAccessToken`] and [`handleImplicitGrantCallback`] functions in the same page make sure you call the [`handleImplicitGrantCallback`] function before the [`getAccessToken`].
 
 #### Example
 
 ```ts
-import { callbackImplicitGrant } from '@lazy/oauth2-implicit-grant-client'
+import { handleImplicitGrantCallback } from '@lazy/oauth2-implicit-grant-client'
 
-callbackImplicitGrant()
+handleImplicitGrantCallback()
 ```
 
 [`getaccesstoken`]: #getaccesstoken
-[`callbackimplicitgrant`]: #callbackimplicitgrant
+[`handleimplicitgrantcallback`]: #handleimplicitgrantcallback
