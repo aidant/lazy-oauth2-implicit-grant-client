@@ -1,7 +1,7 @@
 const channel = new BroadcastChannel('@lazy/oauth2-implicit-grant-client')
 
 export interface Parameters {
-  client_id: string
+  client_id?: string
   redirect_uri?: string
   scope?: string
   state?: string
@@ -27,12 +27,11 @@ export interface ErrorResponse {
 
 export type Response = AccessTokenResponse | ErrorResponse | null
 
-export enum ErrorCodes {
-  WindowCreateFailed = 'window-create-failed',
-  NoResponse = 'no-response',
-  ErrorResponse = 'error-response',
-  StateMismatch = 'state-mismatch',
-}
+export type ErrorCodes =
+  | 'window-create-failed'
+  | 'no-response'
+  | 'error-response'
+  | 'state-mismatch'
 
 export class ImplicitGrantError extends Error {
   declare code: ErrorCodes
@@ -47,14 +46,15 @@ export class ImplicitGrantError extends Error {
 
 export const getAccessToken = async (
   endpoint: string,
-  { ...parameters }: Parameters
+  { ...parameters }: Parameters = {}
 ): Promise<string> => {
   const url = new URL(endpoint)
 
-  parameters.response_type ??= 'token'
-  parameters.state ??= crypto
-    .getRandomValues(new Uint8Array(48))
-    .reduce((string, number) => string + number.toString(16).padStart(2, '0'), '')
+  if (!parameters.response_type) parameters.response_type = 'token'
+  if (!parameters.state)
+    parameters.state = crypto
+      .getRandomValues(new Uint8Array(48))
+      .reduce((string, number) => string + number.toString(16).padStart(2, '0'), '')
 
   for (const parameter in parameters) {
     if (parameters[parameter]) {
@@ -63,7 +63,7 @@ export const getAccessToken = async (
   }
 
   const child = open(url, '_blank')
-  if (!child) throw new ImplicitGrantError(ErrorCodes.WindowCreateFailed)
+  if (!child) throw new ImplicitGrantError('window-create-failed')
 
   return new Promise((resolve, reject) => {
     const handleMessage = (event: MessageEvent) => {
@@ -73,11 +73,11 @@ export const getAccessToken = async (
       const response: Response = event.data
 
       if (!response) {
-        reject(new ImplicitGrantError(ErrorCodes.NoResponse))
+        reject(new ImplicitGrantError('no-response'))
       } else if (response.error) {
-        reject(new ImplicitGrantError(ErrorCodes.ErrorResponse, response))
+        reject(new ImplicitGrantError('error-response', response))
       } else if (response.state !== parameters.state) {
-        reject(new ImplicitGrantError(ErrorCodes.StateMismatch, response))
+        reject(new ImplicitGrantError('state-mismatch', response))
       } else {
         resolve(`${response.token_type} ${response.access_token}`)
       }
