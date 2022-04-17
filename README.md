@@ -1,7 +1,7 @@
-# Lazy Oauth2 Implicit Grant Client
+# Lazy OAuth 2.0 Implicit Grant Client
 
 <p align='center'>
-  A simple Oauth2 Implicit Grant client for the lazy developer.
+  A simple OAuth 2.0 Implicit Grant client for the lazy developer.
   <br>
   <a href='https://www.npmjs.com/package/@lazy/oauth2-implicit-grant-client'>
     <img src="https://img.shields.io/npm/v/@lazy/oauth2-implicit-grant-client?style=flat-square">
@@ -9,8 +9,8 @@
   <a href='https://bundlephobia.com/package/@lazy/oauth2-implicit-grant-client'>
     <img src="https://img.shields.io/bundlephobia/minzip/@lazy/oauth2-implicit-grant-client?label=minified%20%26%20gzipped&style=flat-square">
   </a>
-  <a href='https://github.com/aidant/implicit-grant/actions/workflows/publish.yml'>
-    <img src="https://img.shields.io/github/workflow/status/aidant/implicit-grant/Publish?style=flat-square">
+  <a href='https://github.com/aidant/lazy-oauth2-implicit-grant-client/actions/workflows/publish.yml'>
+    <img src="https://img.shields.io/github/workflow/status/aidant/lazy-oauth2-implicit-grant-client/Publish?style=flat-square">
   </a>
 </p>
 

@@ -47,7 +47,7 @@ export class ImplicitGrantError extends Error {
 export const getAccessToken = async (
   endpoint: string,
   { ...parameters }: Parameters = {}
-): Promise<string> => {
+): Promise<AccessTokenResponse> => {
   const url = new URL(endpoint)
 
   if (!parameters.response_type) parameters.response_type = 'token'
@@ -74,12 +74,12 @@ export const getAccessToken = async (
 
       if (!response) {
         reject(new ImplicitGrantError('no-response'))
-      } else if (response.error) {
-        reject(new ImplicitGrantError('error-response', response))
       } else if (response.state !== parameters.state) {
         reject(new ImplicitGrantError('state-mismatch', response))
+      } else if (response.error) {
+        reject(new ImplicitGrantError('error-response', response))
       } else {
-        resolve(`${response.token_type} ${response.access_token}`)
+        resolve(response as AccessTokenResponse)
       }
     }
 
@@ -88,15 +88,12 @@ export const getAccessToken = async (
 }
 
 export const handleImplicitGrantCallback = () => {
-  const query = new URLSearchParams(location.search)
   const hash = new URLSearchParams(location.hash.substring(1))
 
   let response: Response = null
 
-  if (query.has('error')) {
-    response = Object.fromEntries(query.entries()) as ErrorResponse
-  } else if (hash.has('access_token')) {
-    response = Object.fromEntries(hash.entries()) as AccessTokenResponse
+  if (hash.has('error') || hash.has('access_token')) {
+    response = Object.fromEntries(hash.entries()) as AccessTokenResponse | ErrorResponse
   }
 
   channel.postMessage(response)
