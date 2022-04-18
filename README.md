@@ -20,47 +20,76 @@
 
 - [Example](#example)
 - [API](#api)
-  - [`getAccessToken`]
+  - [`handleImplicitGrantFlow`]
   - [`handleImplicitGrantCallback`]
+  - [`createImplicitGrantURL`]
+  - [`getImplicitGrantResponse`]
 
 ## Example
 
 ```ts
-import { getAccessToken, handleImplicitGrantCallback } from '@lazy/oauth2-implicit-grant-client'
+import {
+  handleImplicitGrantFlow,
+  handleImplicitGrantCallback,
+} from '@lazy/oauth2-implicit-grant-client'
 
 handleImplicitGrantCallback()
 
-const token = await getAccessToken('https://api.example.com/authorize', {
-  client_id: 'example-client-id',
+const button = document.createElement('button')
+button.textContent = 'Login'
+
+button.addEventListener('click', () => {
+  const response = await handleImplicitGrantFlow('https://api.example.com/authorize', {
+    client_id: 'example-client-id',
+  })
+  const token = `${response.token_type} ${response.access_token}`
+  console.log(token)
 })
 ```
 
 ## API
 
-### `getAccessToken`
+### `handleImplicitGrantFlow`
 
-The [`getAccessToken`] function handles the Implicit Grant authentication flow. A new window is created where the user is then prompted to authenticate with the Oauth2 provider, once the user had accepted or rejected the request the `handleImplicitGrantCallback` function then handles the response and returns it back via the promise from `getAccessToken` - just like magic.
+The [`handleImplicitGrantFlow`] function handles the Implicit Grant
+authentication flow. A new window is created where the user is then prompted to
+authenticate with the OAuth 2.0 provider, once the user had accepted or rejected
+the request the `handleImplicitGrantCallback` function then handles the response
+and returns it back via the promise from `handleImplicitGrantFlow` - just like
+magic.
 
 #### Parameters
 
-- `endpoint` - **string** - The Authorization endpoint of the Oauth2 provider.
-- `parameters` - **object** - The Oauth2 parameters such as; `client_id`, `scope`, or `redirect_uri`.
+- `endpoint` - **string** - The Authorization endpoint of the OAuth 2.0 provider.
+- `parameters` - _object_ - The OAuth 2.0 parameters such as; `client_id`, `scope`, and/or `redirect_uri`.
 
 #### Example
 
 ```ts
-import { getAccessToken } from '@lazy/oauth2-implicit-grant-client'
+import { handleImplicitGrantFlow } from '@lazy/oauth2-implicit-grant-client'
 
-const token = await getAccessToken('https://api.example.com/authorize', {
-  client_id: 'example-client-id',
+const button = document.createElement('button')
+button.textContent = 'Login'
+
+button.addEventListener('click', () => {
+  const response = await handleImplicitGrantFlow('https://api.example.com/authorize', {
+    client_id: 'example-client-id',
+  })
+  const token = `${response.token_type} ${response.access_token}`
+  console.log(token)
 })
 ```
 
-Returns `Promise<string>`
+Returns `Promise<ImplicitGrantSuccessResponse>`
 
 ### `handleImplicitGrantCallback`
 
-The [`handleImplicitGrantCallback`] function is responsible for returning the response from the authentication endpoint back to the [`getAccessToken`] function. If you call the [`getAccessToken`] and [`handleImplicitGrantCallback`] functions in the same page make sure you call the [`handleImplicitGrantCallback`] function before the [`getAccessToken`].
+The [`handleImplicitGrantCallback`] function is responsible for returning the
+response from the authentication endpoint back to the
+[`handleImplicitGrantFlow`] function. If you call the
+[`handleImplicitGrantFlow`] and [`handleImplicitGrantCallback`] functions in the
+same page make sure you call the [`handleImplicitGrantCallback`] function before
+the [`handleImplicitGrantFlow`].
 
 #### Example
 
@@ -70,5 +99,91 @@ import { handleImplicitGrantCallback } from '@lazy/oauth2-implicit-grant-client'
 handleImplicitGrantCallback()
 ```
 
-[`getaccesstoken`]: #getaccesstoken
+Returns `void`
+
+### `createImplicitGrantURL`
+
+The [`createImplicitGrantURL`] function allows you to create a URL that can be
+used in the dom on anchor tags or the like to improve accessability over buttons
+with click handlers.
+
+This URL should only be used once, if you need you can call
+[`createImplicitGrantURL`] multiple times to get several url's.
+
+#### Parameters
+
+- `endpoint` - **string** - The Authorization endpoint of the OAuth 2.0 provider.
+- `parameters` - _object_ - The OAuth 2.0 parameters such as; `client_id`, `scope`, and/or `redirect_uri`.
+
+#### Example
+
+```ts
+import { createImplicitGrantURL } from '@lazy/oauth2-implicit-grant-client'
+
+const url = createImplicitGrantURL('https://api.example.com/authorize', {
+  client_id: 'example-client-id',
+})
+
+const a = document.createElement('a')
+a.href = url.href
+a.target = '_blank'
+a.rel = 'noopener'
+a.textContent = 'Login'
+
+a.addEventListener(
+  'click',
+  () => {
+    a.remove()
+  },
+  { once: true }
+)
+
+document.append(a)
+```
+
+Returns `URL`
+
+### `getImplicitGrantResponse`
+
+#### Parameters
+
+- `url` - **URL** - The URL that started the OAuth 2.0 Flow.
+
+#### Example
+
+```ts
+import {
+  createImplicitGrantURL,
+  getImplicitGrantResponse,
+} from '@lazy/oauth2-implicit-grant-client'
+
+const url = createImplicitGrantURL('https://api.example.com/authorize', {
+  client_id: 'example-client-id',
+})
+
+const a = document.createElement('a')
+a.href = url.href
+a.target = '_blank'
+a.rel = 'noopener'
+a.textContent = 'Login'
+
+a.addEventListener(
+  'click',
+  async () => {
+    a.remove()
+    const response = await getImplicitGrantResponse(url)
+    const token = `${response.token_type} ${response.access_token}`
+    console.log(token)
+  },
+  { once: true }
+)
+
+document.append(a)
+```
+
+Returns `Promise<ImplicitGrantSuccessResponse>`
+
+[`handleimplicitgrantflow`]: #handleimplicitgrantflow
 [`handleimplicitgrantcallback`]: #handleimplicitgrantcallback
+[`createimplicitgranturl`]: #createimplicitgranturl
+[`getimplicitgrantresponse`]: #getimplicitgrantresponse

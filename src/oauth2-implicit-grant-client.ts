@@ -1,14 +1,16 @@
-const channel = new BroadcastChannel('@lazy/oauth2-implicit-grant-client')
+/*
+  OAuth 2.0 Implicit Grant Types
+*/
 
-export interface Parameters {
-  client_id?: string
+export interface ImplicitGrantRequest {
+  response_type: 'token'
+  client_id: string
   redirect_uri?: string
   scope?: string
   state?: string
-  [parameter: string]: string | undefined
 }
 
-export interface AccessTokenResponse {
+export interface ImplicitGrantSuccessResponse {
   access_token: string
   token_type: string
   expires_in?: string
@@ -17,7 +19,7 @@ export interface AccessTokenResponse {
   [response: string]: string | undefined
 }
 
-export interface ErrorResponse {
+export interface ImplicitGrantErrorResponse {
   error: string
   error_description?: string
   error_uri?: string
@@ -25,7 +27,15 @@ export interface ErrorResponse {
   [response: string]: string | undefined
 }
 
-export type Response = AccessTokenResponse | ErrorResponse | null
+export type ImplicitGrantResponse = ImplicitGrantSuccessResponse | ImplicitGrantErrorResponse | null
+
+/*
+  Lazy OAuth 2.0 Implicit Grant Client Types
+*/
+
+export interface Parameters extends Partial<ImplicitGrantRequest> {
+  [parameter: string]: string | undefined
+}
 
 export type ErrorCodes =
   | 'window-create-failed'
@@ -34,27 +44,33 @@ export type ErrorCodes =
   | 'state-mismatch'
 
 export class ImplicitGrantError extends Error {
-  declare code: ErrorCodes
-  declare response: Response
-
-  constructor(code: ErrorCodes, response: Response = null) {
+  constructor(
+    public readonly code: ErrorCodes,
+    public readonly response: ImplicitGrantResponse = null
+  ) {
     super(code)
-    this.code = code
-    this.response = response
   }
 }
 
-export const getAccessToken = async (
-  endpoint: string,
+/*
+  Utilities
+*/
+
+const channel = new BroadcastChannel('@lazy/oauth2-implicit-grant-client')
+
+const createState = (): string =>
+  crypto
+    .getRandomValues(new Uint8Array(48))
+    .reduce((string, number) => string + number.toString(16).padStart(2, '0'), '')
+
+export const createImplicitGrantURL = (
+  authorizeEndpoint: string,
   { ...parameters }: Parameters = {}
-): Promise<AccessTokenResponse> => {
-  const url = new URL(endpoint)
+): URL => {
+  const url = new URL(authorizeEndpoint)
 
   if (!parameters.response_type) parameters.response_type = 'token'
-  if (!parameters.state)
-    parameters.state = crypto
-      .getRandomValues(new Uint8Array(48))
-      .reduce((string, number) => string + number.toString(16).padStart(2, '0'), '')
+  if (!parameters.state) parameters.state = createState()
 
   for (const parameter in parameters) {
     if (parameters[parameter]) {
@@ -62,39 +78,54 @@ export const getAccessToken = async (
     }
   }
 
-  const child = open(url, '_blank')
-  if (!child) throw new ImplicitGrantError('window-create-failed')
+  return url
+}
 
-  return new Promise((resolve, reject) => {
-    const handleMessage = (event: MessageEvent) => {
-      channel.removeEventListener('message', handleMessage)
-      child.close()
-
-      const response: Response = event.data
-
-      if (!response) {
-        reject(new ImplicitGrantError('no-response'))
-      } else if (response.state !== parameters.state) {
-        reject(new ImplicitGrantError('state-mismatch', response))
-      } else if (response.error) {
-        reject(new ImplicitGrantError('error-response', response))
-      } else {
-        resolve(response as AccessTokenResponse)
-      }
-    }
-
-    channel.addEventListener('message', handleMessage)
+export const getImplicitGrantResponse = async (url: URL): Promise<ImplicitGrantSuccessResponse> => {
+  const response = await new Promise<ImplicitGrantResponse>((resolve, reject) => {
+    channel.addEventListener(
+      'message',
+      (event) => {
+        channel.postMessage('response-received')
+        resolve(event.data)
+      },
+      { once: true }
+    )
   })
+
+  if (!response) throw new ImplicitGrantError('no-response')
+  if (response.state !== url.searchParams.get('state'))
+    throw new ImplicitGrantError('state-mismatch', response)
+  if ('error' in response) throw new ImplicitGrantError('error-response', response)
+
+  return response
+}
+
+export const handleImplicitGrantFlow = async (
+  authorizeEndpoint: string,
+  parameters: Parameters = {}
+): Promise<ImplicitGrantSuccessResponse> => {
+  const url = createImplicitGrantURL(authorizeEndpoint, parameters)
+  if (!open(url, '_blank')) throw new ImplicitGrantError('window-create-failed')
+  return getImplicitGrantResponse(url)
 }
 
 export const handleImplicitGrantCallback = () => {
   const hash = new URLSearchParams(location.hash.substring(1))
-
-  let response: Response = null
+  let response: ImplicitGrantResponse = null
 
   if (hash.has('error') || hash.has('access_token')) {
-    response = Object.fromEntries(hash.entries()) as AccessTokenResponse | ErrorResponse
+    response = Object.fromEntries(hash.entries()) as
+      | ImplicitGrantSuccessResponse
+      | ImplicitGrantErrorResponse
   }
 
   channel.postMessage(response)
+  channel.addEventListener(
+    'message',
+    (event) => {
+      if (event.data === 'response-received') window.close()
+    },
+    { once: true }
+  )
 }
